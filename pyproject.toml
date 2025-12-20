@@ -16,3 +16,17 @@ dev = [
     "pre-commit>=4.5.1",
     "ruff>=0.14.10",
 ]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
