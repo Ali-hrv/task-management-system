@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # my_apps
     "apps.accounts",
+    "apps.workspaces",
 ]
 
 MIDDLEWARE = [
