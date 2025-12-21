@@ -49,6 +49,10 @@ class Task(models.Model):
         related_name="assigned_tasks",
     )
 
+    parent = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="subtasks"
+    )
+
     workspace = models.ForeignKey(
         Workspace, on_delete=models.CASCADE, related_name="tasks"
     )
