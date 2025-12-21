@@ -56,3 +56,34 @@ class WorkspaceMember(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} - {self.workspace} ({self.role})"
+
+
+class Board(models.Model):
+    name = models.CharField(max_length=200)
+
+    workspace = models.ForeignKey(
+        Workspace, on_delete=models.CASCADE, related_name="boards"
+    )
+
+    position = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ("position",)
+
+    def __str__(self):
+        return self.name
+
+
+class TaskList(models.Model):
+    title = models.CharField(max_length=200)
+
+    board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="task_list")
+
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position",)
+
+    def __str__(self):
+        return self.title
