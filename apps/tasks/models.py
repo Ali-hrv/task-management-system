@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -71,3 +72,11 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+
+    def clean(self):
+        if self.parent and self.parent.parent:
+            raise ValidationError("Subtasks can not have another subtask as parent.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
