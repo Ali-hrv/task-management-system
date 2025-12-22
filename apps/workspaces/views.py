@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Workspace
-from .permissions import IsWorkspaceOwner
+from .permissions import IsWorkspaceAdminOrOwner
 from .serializers import WorkspaceSerializer
 
 
@@ -22,7 +22,7 @@ class WorkspaceListCreateView(APIView):
 
 
 class WorkspaceDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsWorkspaceOwner]
+    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrOwner]
 
     def get_object(self, pk):
         return Workspace.objects.get(pk=pk)
