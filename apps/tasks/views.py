@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from apps.workspaces.models import Workspace
 
 from .models import Task
-from .permissions import CanManageTask
+from .permissions import TaskPermission
 from .serializers import TaskSerializer
 
 
@@ -29,7 +29,7 @@ class TaskListCreateView(APIView):
 
 
 class TaskDetailView(APIView):
-    permission_classes = [IsAuthenticated, CanManageTask]
+    permission_classes = [IsAuthenticated, TaskPermission]
 
     def get_object(self, pk):
         return get_object_or_404(Task, pk=pk)
