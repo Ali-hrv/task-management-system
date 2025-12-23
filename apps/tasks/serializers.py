@@ -24,6 +24,20 @@ class TaskSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "workspace", "created_at", "updated_at")
 
+    def validate(self, attrs):
+        request = self.context["request"]
+        user = request.user
+        task = self.instance
+
+        if task and "status" in attrs:
+            new_task = attrs["status"]
+
+            if new_task == TaskStatus.DONE and task.assignee != user:
+                raise serializers.ValidationError(
+                    "Only the assignee can mark this task  as done."
+                )
+        return attrs
+
 
 class SubTaskCreateSerializer(serializers.ModelSerializer):
     class Meta:

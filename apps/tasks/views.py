@@ -48,7 +48,9 @@ class TaskDetailView(APIView):
         task = self.get_object(pk)
         self.check_object_permissions(request, task)
 
-        serializer = TaskSerializer(task, data=request.data, partial=True)
+        serializer = TaskSerializer(
+            task, data=request.data, partial=True, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
