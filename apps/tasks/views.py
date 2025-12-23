@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,11 +9,13 @@ from apps.workspaces.models import Workspace
 
 from .models import Task
 from .permissions import TaskPermission
-from .serializers import TaskSerializer
+from .serializers import SubTaskCreateSerializer, TaskSerializer
 
 
 class TaskListCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["status", "priority", "assignee"]
 
     def get(self, request, workspace_id):
         tasks = Task.objects.all()
@@ -57,3 +60,29 @@ class TaskDetailView(APIView):
 
         task.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SubTaskCreateView(APIView):
+    permission_classes = [TaskPermission]
+
+    def get(self, request, task_id):
+        parent = get_object_or_404(Task, id=task_id, parent__isnull=True)
+        subtasks = parent.subtasks.all()
+
+        serializer = TaskSerializer(subtasks, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, task_id):
+        parent = get_object_or_404(Task, id=task_id, parent__isnull=True)
+
+        serializer = SubTaskCreateSerializer(
+            data=request.data,
+            context={
+                "request": request,
+                "parent_task": parent,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
