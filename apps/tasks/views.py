@@ -1,5 +1,4 @@
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -14,11 +13,22 @@ from .serializers import SubTaskCreateSerializer, TaskSerializer
 
 class TaskListCreateView(APIView):
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["status", "priority", "assignee"]
 
     def get(self, request, workspace_id):
-        tasks = Task.objects.all()
+        tasks = Task.objects.filter(workspace_id=workspace_id)
+
+        status_param = request.query_params.get("status")
+        if status_param:
+            tasks = tasks.filter(status=status_param)
+
+        priority_param = request.query_params.get("priority")
+        if priority_param:
+            tasks = tasks.filter(priority=priority_param)
+
+        assignee_param = request.query_params.get("assignee")
+        if assignee_param:
+            tasks = tasks.filter(assignee_id=assignee_param)
+
         serializer = TaskSerializer(tasks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
