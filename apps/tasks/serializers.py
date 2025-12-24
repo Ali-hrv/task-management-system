@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from ..workspaces.models import WorkspaceMember
 from .models import Task, TaskStatus
 
 
@@ -36,6 +37,16 @@ class TaskSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Only the assignee can mark this task  as done."
                 )
+
+            if new_task == TaskStatus.ARCHIVED:
+                member = WorkspaceMember.objects.get(
+                    workspace=task.workspace, user=user
+                )
+
+                if member.role not in ["owner", "admin"]:
+                    raise serializers.ValidationError(
+                        "Only owner or admin can archive this task."
+                    )
         return attrs
 
 
