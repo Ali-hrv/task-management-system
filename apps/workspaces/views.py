@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,8 +12,13 @@ from .serializers import WorkspaceSerializer
 class WorkspaceListCreateView(APIView):
     def get(self, request):
         workspaces = Workspace.objects.all()
-        serializer = WorkspaceSerializer(workspaces, many=True)
-        return Response(serializer.data)
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 5
+
+        paginated_workspace = paginator.paginate_queryset(workspaces, request)
+        serializer = WorkspaceSerializer(paginated_workspace, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         serializer = WorkspaceSerializer(data=request.data)
