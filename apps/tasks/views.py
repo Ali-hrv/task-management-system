@@ -1,109 +1,90 @@
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet, ViewSet
 
 from apps.workspaces.models import Workspace
 
+from .filters import TaskFilter
 from .models import Task
 from .permissions import TaskPermission
 from .serializers import SubTaskCreateSerializer, TaskSerializer
 
 
-class TaskListCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+class TaskPagination(PageNumberPagination):
+    page_size = 10
 
-    def get(self, request, workspace_id):
-        tasks = Task.objects.filter(workspace_id=workspace_id)
 
-        status_param = request.query_params.get("status")
-        if status_param:
-            tasks = tasks.filter(status=status_param)
+class TaskViewSet(ModelViewSet):
+    serializer_class = TaskSerializer
+    pagination_class = TaskPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TaskFilter
 
-        priority_param = request.query_params.get("priority")
-        if priority_param:
-            tasks = tasks.filter(priority=priority_param)
+    def get_queryset(self):
+        qs = Task.objects.all()
 
-        assignee_param = request.query_params.get("assignee")
-        if assignee_param:
-            tasks = tasks.filter(assignee_id=assignee_param)
+        workspace_id = self.kwargs.get("workspace_id")
+        if workspace_id is not None:
+            qs = qs.filter(workspace_id=workspace_id)
 
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
-        paginated_tasks = paginator.paginate_queryset(tasks, request)
-        serializer = TaskSerializer(paginated_tasks, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        return qs
 
-    def post(self, request, workspace_id):
+    def get_permissions(self):
+        if self.action in ["list", "create"]:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), TaskPermission()]
+
+    def create(self, request, *args, **kwargs):
+        workspace_id = self.kwargs.get("workspace_id")
         workspace = get_object_or_404(Workspace, id=workspace_id)
 
-        serializer = TaskSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         serializer.save(creator=request.user, workspace=workspace)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+        return Response(serializer.data, status.HTTP_201_CREATED)
 
-class TaskDetailView(APIView):
-    permission_classes = [IsAuthenticated, TaskPermission]
+    def update(self, request, *args, **kwargs):
+        partial = True
+        instance = self.get_object()
 
-    def get_object(self, pk):
-        return get_object_or_404(Task, pk=pk)
-
-    def get(self, request, pk):
-        task = self.get_object(pk)
-        self.check_object_permissions(request, task)
-
-        serializer = TaskSerializer(task)
-        return Response(serializer.data)
-
-    def put(self, request, pk):
-        task = self.get_object(pk)
-        self.check_object_permissions(request, task)
-
-        serializer = TaskSerializer(
-            task, data=request.data, partial=True, context={"request": request}
-        )
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return Response(serializer.data)
-
-    def delete(self, request, pk):
-        task = self.get_object(pk)
-        self.check_object_permissions(request, task)
-
-        task.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.data, status.HTTP_200_OK)
 
 
-class SubTaskCreateView(APIView):
+class SubTaskPagination(PageNumberPagination):
+    page_size = 10
+
+
+class SubTaskViewSet(ViewSet):
     permission_classes = [TaskPermission]
+    pagination_class = SubTaskPagination
 
-    def get(self, request, task_id):
+    def list(self, request, task_id=None):
         parent = get_object_or_404(Task, id=task_id, parent__isnull=True)
+        self.check_object_permissions(request, parent)
         subtasks = parent.subtasks.all()
 
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
-
-        paginated_subtasks = paginator.paginate_queryset(subtasks, request)
-        serializer = TaskSerializer(paginated_subtasks, many=True)
-
+        paginator = self.pagination_class
+        page = paginator.paginate_queryset(subtasks, request)
+        serializer = TaskSerializer(page, many=True, context={"request": request})
         return paginator.get_paginated_response(serializer.data)
 
-    def post(self, request, task_id):
+    def create(self, request, task_id):
         parent = get_object_or_404(Task, id=task_id, parent__isnull=True)
+        self.check_object_permissions(request, parent)
 
         serializer = SubTaskCreateSerializer(
-            data=request.data,
-            context={
-                "request": request,
-                "parent_task": parent,
-            },
+            data=request.data, context={"request": request, "parent_task": parent}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status.HTTP_201_CREATED)

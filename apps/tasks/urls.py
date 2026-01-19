@@ -1,13 +1,20 @@
 from django.urls import path
 
-from . import views
+from .views import SubTaskViewSet, TaskViewSet
+
+task_list_create = TaskViewSet.as_view({"get": "list", "post": "create"})
+task_detail = TaskViewSet.as_view(
+    {"get": "retrieve", "put": "update", "patch": "update", "delete": "destroy"}
+)
+
+subtask_list_create = SubTaskViewSet.as_view({"get": "list", "post": "create"})
 
 urlpatterns = [
-    path("workspaces/<int:workspace_id>/tasks/", views.TaskListCreateView.as_view()),
-    path("tasks/<int:pk>/", views.TaskDetailView.as_view()),
+    path("workspaces/<int:workspace_id>/tasks/", task_list_create),
+    path("tasks/<int:pk>/", task_detail),
     path(
         "tasks/<int:task_id>/subtasks/",
-        views.SubTaskCreateView.as_view(),
+        subtask_list_create,
         name="task-subtask-list-create",
     ),
 ]
