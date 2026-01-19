@@ -1,54 +1,28 @@
-from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 
 from .models import Workspace
 from .permissions import IsWorkspaceAdminOrOwner
 from .serializers import WorkspaceSerializer
 
 
-class WorkspaceListCreateView(APIView):
-    def get(self, request):
-        workspaces = Workspace.objects.all()
-
-        paginator = PageNumberPagination()
-        paginator.page_size = 5
-
-        paginated_workspace = paginator.paginate_queryset(workspaces, request)
-        serializer = WorkspaceSerializer(paginated_workspace, many=True)
-        return paginator.get_paginated_response(serializer.data)
-
-    def post(self, request):
-        serializer = WorkspaceSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(owner=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+class WorkspacePagination(PageNumberPagination):
+    page_size = 2
 
 
-class WorkspaceDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsWorkspaceAdminOrOwner]
+class WorkspaceViewSet(ModelViewSet):
+    serializer_class = WorkspaceSerializer
+    pagination_class = WorkspacePagination
+    permission_classes = [IsAuthenticated]
 
-    def get_object(self, pk):
-        return Workspace.objects.get(pk=pk)
+    def get_queryset(self):
+        return Workspace.objects.all()
 
-    def get(self, request, pk):
-        workspace = self.get_object(pk)
-        serializer = WorkspaceSerializer(workspace)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_permissions(self):
+        if self.action in ["retrieve", "update", "partial_update", "destroy"]:
+            return [IsAuthenticated(), IsWorkspaceAdminOrOwner()]
+        return [IsAuthenticated()]
 
-    def put(self, request, pk):
-        workspace = self.get_object(pk)
-        self.check_object_permissions(request, workspace)
-
-        serializer = WorkspaceSerializer(workspace, request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
-
-    def delete(self, request, pk):
-        workspace = self.get_object(pk)
-        self.check_object_permissions(request, workspace)
-        workspace.delete()
-        return Response({"Response": "Deleted"}, status=status.HTTP_204_NO_CONTENT)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
