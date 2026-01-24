@@ -69,6 +69,12 @@ class Task(models.Model):
                 name="unique_task_position_per_workspace",
             )
         ]
+        indexes = [
+            models.Index(fields=["workspace", "status"]),
+            models.Index(fields=["workspace", "priority"]),
+            models.Index(fields=["workspace", "assignee"]),
+            models.Index(fields=["parent"]),
+        ]
 
     def __str__(self):
         return self.title

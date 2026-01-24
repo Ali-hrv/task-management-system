@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ViewSet
 
-from apps.workspaces.models import Workspace
+from apps.workspaces.models import Workspace, WorkspaceMember
 
 from .filters import TaskFilter
 from .models import Task
@@ -25,7 +25,16 @@ class TaskViewSet(ModelViewSet):
     filterset_class = TaskFilter
 
     def get_queryset(self):
-        qs = Task.objects.all()
+        user = self.request.user
+        qs = Task.objects.select_related("workspace", "assignee", "parent", "creator")
+
+        if not user.is_authenticated:
+            return qs.none()
+
+        allowed_workspace_ids = WorkspaceMember.objects.filter(user=user).values_list(
+            "workspace_id", flat=True
+        )
+        qs = qs.filter(workspace_id__in=allowed_workspace_ids)
 
         workspace_id = self.kwargs.get("workspace_id")
         if workspace_id is not None:
@@ -65,13 +74,15 @@ class SubTaskPagination(PageNumberPagination):
 
 
 class SubTaskViewSet(ViewSet):
-    permission_classes = [TaskPermission]
+    permission_classes = [IsAuthenticated, TaskPermission]
     pagination_class = SubTaskPagination
 
     def list(self, request, task_id=None):
         parent = get_object_or_404(Task, id=task_id, parent__isnull=True)
         self.check_object_permissions(request, parent)
-        subtasks = parent.subtasks.all()
+        subtasks = parent.subtasks.select_related(
+            "workspace", "assignee", "parent", "creator"
+        )
 
         paginator = self.pagination_class
         page = paginator.paginate_queryset(subtasks, request)
