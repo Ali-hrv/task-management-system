@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
@@ -31,10 +32,13 @@ class TaskViewSet(ModelViewSet):
         if not user.is_authenticated:
             return qs.none()
 
-        allowed_workspace_ids = WorkspaceMember.objects.filter(user=user).values_list(
-            "workspace_id", flat=True
-        )
-        qs = qs.filter(workspace_id__in=allowed_workspace_ids)
+        allowed_workspace_ids = WorkspaceMember.objects.filter(
+            user_id=user.id
+        ).values_list("workspace_id", flat=True)
+
+        qs = qs.filter(
+            Q(workspace__owner_id=user.id) | Q(workspace_id__in=allowed_workspace_ids)
+        ).distinct()
 
         workspace_id = self.kwargs.get("workspace_id")
         if workspace_id is not None:
