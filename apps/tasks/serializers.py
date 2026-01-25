@@ -30,6 +30,12 @@ class TaskSerializer(serializers.ModelSerializer):
         user = request.user
         task = self.instance
 
+        if not task:
+            return attrs
+
+        if "status" not in attrs:
+            return attrs
+
         if task and "status" in attrs:
             new_task = attrs["status"]
 
@@ -39,6 +45,9 @@ class TaskSerializer(serializers.ModelSerializer):
                 )
 
             if new_task == TaskStatus.ARCHIVED:
+                if task.workspace.owner_id == user.id:
+                    return attrs
+
                 member = WorkspaceMember.objects.get(
                     workspace=task.workspace, user=user
                 )
