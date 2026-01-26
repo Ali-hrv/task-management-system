@@ -43,7 +43,7 @@ class TestTaskFilter(BaseTaskAPITestCase):
 
     def test_filter_by_assignee(self):
         Task.objects.create(
-            title="Priority task",
+            title="Assigned to admin",
             workspace=self.workspace,
             creator=self.member,
             assignee=self.admin,
@@ -54,6 +54,28 @@ class TestTaskFilter(BaseTaskAPITestCase):
         response = self.client.get(self.task_list_url() + f"?assignee={self.admin.id}")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            all(item["assignee"] == self.admin.id for item in response.data["results"])
+        )
+
+    def test_filter_combined(self):
+        Task.objects.create(
+            title="Admin Done",
+            workspace=self.workspace,
+            creator=self.member,
+            assignee=self.admin,
+            status=TaskStatus.DONE,
+            position=2,
+        )
+        self.auth(self.member)
+        response = self.client.get(
+            self.task_list_url() + f"?status=done&assignee={self.admin.id}"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            all(item["status"] == "done" for item in response.data["results"])
+        )
         self.assertTrue(
             all(item["assignee"] == self.admin.id for item in response.data["results"])
         )
