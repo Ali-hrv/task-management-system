@@ -2,6 +2,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -54,6 +55,20 @@ class TaskViewSet(ModelViewSet):
     def create(self, request, *args, **kwargs):
         workspace_id = self.kwargs.get("workspace_id")
         workspace = get_object_or_404(Workspace, id=workspace_id)
+
+        user = request.user
+        if workspace.owner_id != user.id:
+            role = (
+                WorkspaceMember.objects.filter(
+                    workspace_id=workspace.id, user_id=user.id
+                )
+                .values_list("role", flat=True)
+                .first()
+            )
+            if role is None or role == WorkspaceMember.ROLE_VIEWER:
+                raise PermissionDenied(
+                    "You don't have permission to create task in this workspace."
+                )
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
