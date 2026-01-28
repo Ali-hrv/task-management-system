@@ -6,19 +6,20 @@ User = get_user_model()
 
 
 class BaseJWTTest(TestCase):
+    login_url = "/api/auth/login/"
+    refresh_url = "/api/auth/refresh/"
+    logout_url = "/api/auth/logout/"
+    email = "user@gmail.com"
+    password = "123456"
+
     def setUp(self):
         self.client = APIClient()
-        self.password = "123456"
 
         self.user = User.objects.create_user(
-            email="user@gmail.com",
+            email=self.email,
             username="user",
             password=self.password,
         )
-
-        self.login_url = "/api/auth/login/"
-        self.refresh_url = "/api/auth/refresh/"
-        self.logout_url = "/api/auth/logout/"
 
     def login(self, email=None, password=None):
         return self.client.post(

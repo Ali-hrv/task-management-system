@@ -2,7 +2,7 @@ from rest_framework import status
 
 from apps.tasks.models import Task, TaskStatus
 
-from .test_permissions import BaseTaskAPITestCase
+from .base import BaseTaskAPITestCase
 
 
 class TestPaginationTask(BaseTaskAPITestCase):

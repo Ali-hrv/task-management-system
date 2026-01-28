@@ -100,7 +100,7 @@ class BaseTaskSerializerTest(TestCase):
             password="123456",
         )
         self.outsider = User.objects.create_user(
-            email="outsider@gmial.com",
+            email="outsider@gmail.com",
             username="outsider",
             password="123456",
         )
